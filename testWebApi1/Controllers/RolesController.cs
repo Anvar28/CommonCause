@@ -56,7 +56,7 @@ namespace testWebApi1.Controllers
             {
                 await db.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException e)
             {
                 if (!RolesExists(id))
                 {
@@ -64,8 +64,8 @@ namespace testWebApi1.Controllers
                 }
                 else
                 {
-                    throw;
-                }
+					WebApiApplication.logger.Warn(e.ToString());
+				}
             }
 
             return StatusCode(HttpStatusCode.NoContent);

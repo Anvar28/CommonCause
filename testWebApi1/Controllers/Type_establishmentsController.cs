@@ -27,7 +27,7 @@ namespace testWebApi1.Controllers
         [ResponseType(typeof(Type_establishments))]
         public async Task<IHttpActionResult> GetType_establishments(int id)
         {
-            Type_establishments type_establishments = await db.type_establishments.FindAsync(id);
+			Type_establishments type_establishments = await db.type_establishments.FindAsync(id);
             if (type_establishments == null)
             {
                 return NotFound();
@@ -56,7 +56,7 @@ namespace testWebApi1.Controllers
             {
                 await db.SaveChangesAsync();
             }
-            catch (DbUpdateConcurrencyException)
+            catch (DbUpdateConcurrencyException e)
             {
                 if (!Type_establishmentsExists(id))
                 {
@@ -64,8 +64,8 @@ namespace testWebApi1.Controllers
                 }
                 else
                 {
-                    throw;
-                }
+					WebApiApplication.logger.Warn(e.ToString());
+				}
             }
 
             return StatusCode(HttpStatusCode.NoContent);
