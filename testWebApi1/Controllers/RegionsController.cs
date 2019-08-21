@@ -52,8 +52,6 @@ namespace testWebApi1.Controllers
                 return BadRequest();
             }
 
-            db.Entry(regions).State = EntityState.Modified;
-
 			// Регион может быть подчинен другому региону, который может быть подчинен другому и т.д.
 			// при этом может быть проблема зацикливаения
 			// Регион 1
@@ -62,7 +60,7 @@ namespace testWebApi1.Controllers
 			// Если поменять у региона 1 родителя на Регион 1-1-1, то будет зацикливание
 			// Необходимо реализовать проверку при изменении родителя региона
 
-			Regions regionsDb = await db.regions.FindAsync(id);
+			Regions regionsDb = db.regions.AsNoTracking().Single(x => x.id_region == id);
 
 			if (regionsDb.id_parent != regions.id_parent)
 			{
@@ -78,6 +76,8 @@ namespace testWebApi1.Controllers
 					return BadRequest(msgErrorEditParentLoop);
 				}
 			}
+
+			db.Entry(regions).State = EntityState.Modified;
 
 			try
 			{
