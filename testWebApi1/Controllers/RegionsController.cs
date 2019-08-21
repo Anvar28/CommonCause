@@ -17,6 +17,8 @@ namespace testWebApi1.Controllers
     {
         private _dbModel db = new _dbModel();
 
+		private const string msgErrorEditParentLoop = "Ошибка изменения родителя, зацикливание. Изменение не возможно.";
+
         // GET: api/Regions
         public IQueryable<Regions> Getregions()
         {
@@ -52,8 +54,33 @@ namespace testWebApi1.Controllers
 
             db.Entry(regions).State = EntityState.Modified;
 
-            try
-            {
+			// Регион может быть подчинен другому региону, который может быть подчинен другому и т.д.
+			// при этом может быть проблема зацикливаения
+			// Регион 1
+			//	 Регион 1-1
+			//	    Регион 1-1-1
+			// Если поменять у региона 1 родителя на Регион 1-1-1, то будет зацикливание
+			// Необходимо реализовать проверку при изменении родителя региона
+
+			Regions regionsDb = await db.regions.FindAsync(id);
+
+			if (regionsDb.id_parent != regions.id_parent)
+			{
+				if (ParentLoop(id, regions.id_parent))
+				{
+					WebApiApplication.logger.Warn(
+						"{0} \r id_region {1}  new id_parent {2} old id_parent {3}", 
+						msgErrorEditParentLoop,
+						regions.id_region,
+						regions.id_parent,
+						regionsDb.id_parent
+					);
+					return BadRequest(msgErrorEditParentLoop);
+				}
+			}
+
+			try
+			{
                 await db.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException e)
@@ -115,5 +142,29 @@ namespace testWebApi1.Controllers
         {
             return db.regions.Count(e => e.id_region == id) > 0;
         }
-    }
+
+		/// <summary>
+		/// Проверка зацикливания региона.
+		/// Регион может быть подчинен другому региону, который может быть подчинен другому и т.д.
+		/// при этом может быть проблема зацикливаения
+		/// Регион 1
+		///	  Регион 1-1
+		///     Регион 1-1-1
+		/// Если поменять у региона 1 родителя на Регион 1-1-1, то будет зацикливание
+		/// </summary>
+		/// <param name="idRegion"></param>
+		/// <param name="newIdParent"></param>
+		/// <returns></returns>
+		private bool ParentLoop(int idRegion, int? newIdParent)
+		{
+			if (newIdParent == null)
+				return false;
+
+			Regions region = db.regions.Find(newIdParent);
+			if (region.id_parent == idRegion)
+				return true;
+
+			return ParentLoop(idRegion, region.id_parent);
+		}
+	}
 }
